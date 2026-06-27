@@ -8,9 +8,28 @@
 #include "glfuncs.c"
 #include "math.c"
 #include "time.c"
+#include "camera.c"
 
 int win_width = 800;
 int win_height = 600;
+
+// up and down look angle
+float pitch = 0.0f;
+
+// left and right look angle
+float yaw = -3.14f / 2.0f;
+
+// where the camera is in world space
+float cameraPos;
+
+// direction the camera is looking
+float cameraFront;
+
+
+float mouse_sensitivity = .0002f;
+float x_mouse_pos = 0.0;
+float y_mouse_pos = 0.0;
+
 
 const char *triangle_vertex_shader_source =
 "#version 460 core\n"
@@ -149,7 +168,7 @@ int main(void)
 
     XSetWindowAttributes swa;
     swa.colormap = colormap;
-    swa.event_mask = ExposureMask | KeyPressMask | StructureNotifyMask;
+    swa.event_mask = ExposureMask | KeyPressMask | StructureNotifyMask | PointerMotionMask;
 
     Window window = XCreateWindow(
             display,
@@ -316,7 +335,26 @@ int main(void)
 
             if (event.type == KeyPress) {
                 running = 0;
-            } else if (event.type == ConfigureNotify) {
+            }
+            else if (event.type == MotionNotify)
+            {
+                float last_mouse_x = x_mouse_pos;
+                float last_mouse_y = y_mouse_pos;
+                float current_mouse_x = (float)event.xmotion.x;
+                float current_mouse_y = (float)event.xmotion.y;
+
+                float dx = (float)(current_mouse_x - last_mouse_x);
+                float dy = (float)(current_mouse_y - last_mouse_y);
+
+                update_yaw_pitch(dx, dy, mouse_sensitivity, &yaw, &pitch);
+
+                x_mouse_pos = event.xmotion.x;
+                y_mouse_pos = event.xmotion.y;
+
+                fprintf(stderr, "x: %f, y: %f\n", x_mouse_pos, y_mouse_pos);
+            }
+            else if (event.type == ConfigureNotify)
+            {
                 win_width = event.xconfigure.width;
                 win_height = event.xconfigure.height;
                 glViewport(0, 0, event.xconfigure.width, event.xconfigure.height);
@@ -345,10 +383,13 @@ int main(void)
 
         GLint mvpLoc = pglGetUniformLocation(triangle_program, "uMVP");
 
-        float aspect = (float)win_width / (float)win_height;
+        Vec3 cameraPos = { 0.0f, 0.0f, 3.0f };
+        Vec3 cameraUp = { 0.0f, 1.0f, 0.0f };
+        Vec3 cameraFront = camera_front_from_angles(yaw, pitch);
 
+        float aspect = (float)win_width / (float)win_height;
         Mat4 model = mat4_translate(0.0f, 0.0f, -2.5f);
-        Mat4 view = mat4_identity();
+        Mat4 view = mat4_look_at(cameraPos, vec3_add(cameraPos, cameraFront), cameraUp);
         Mat4 projection = mat4_perspective(45.0f * 3.1415926f / 180.0f, aspect, 0.1f, 100.0f);
         Mat4 mvp = mat4_mul(projection, mat4_mul(view, model));
 
