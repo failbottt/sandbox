@@ -82,3 +82,25 @@ typedef void (*GLDRAWARRAYSPROC)(
         );
 
 typedef void (*GLUSEPROGRAMPROC)(GLuint program);
+
+typedef GLuint (*GLGETUNIFORMLOCATIONPROC)(
+        GLuint program,
+        const GLchar *name
+        );
+
+typedef GLuint (*GLUNIFORM4FPROC)(
+        GLint location,
+        GLfloat v0,
+        GLfloat v1,
+        GLfloat v2,
+        GLfloat v3
+        );
+
+typedef GLuint (*GLUNIFORMMATRIX4FVPROC)(
+        GLint location,
+        GLsizei count,
+        GLboolean transpose,
+        const GLfloat *value
+        );
+
+typedef GLuint (*GLUNIFORM1FPROC)(GLuint program, GLfloat value);

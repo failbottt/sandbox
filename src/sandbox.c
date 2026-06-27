@@ -6,12 +6,29 @@
 #include <stdlib.h>
 
 #include "glfuncs.c"
+#include "math.c"
+#include "time.c"
+
+int win_width = 800;
+int win_height = 600;
 
 const char *triangle_vertex_shader_source =
 "#version 460 core\n"
-"layout(location = 0) in vec2 aPos;\n"
+"layout(location = 0) in vec3 aPos;\n"
+"uniform float uAngle;\n"
+"uniform mat4 uMVP;\n"
 "void main() {\n"
-"   gl_Position = vec4(aPos, 0.0, 1.0);\n"
+"   float c = cos(uAngle);\n"
+"   float s = sin(uAngle);\n"
+"\n"
+"   mat4 rotY = mat4(\n"
+"         c, 0.0,   s, 0.0,\n"
+"       0.0, 1.0, 0.0, 0.0,\n"
+"        -s, 0.0,   c, 0.0,\n"
+"       0.0, 0.0, 0.0, 1.0\n"
+"       ); \n"
+"\n"
+"   gl_Position = uMVP * rotY * vec4(aPos, 1.0);\n"
 "}";
 
 const char *triangle_fragment_shader_source =
@@ -22,11 +39,63 @@ const char *triangle_fragment_shader_source =
 "    FragColor = uColor;\n"
 "}";
 
-float triangle_vertices[] = {
-     0.0f,  0.5f,
-    -0.5f, -0.5f,
-     0.5f, -0.5f
+float cube_vertices[] = {
+    // Front face
+    -0.5f, -0.5f,  0.5f,
+    0.5f, -0.5f,  0.5f,
+    0.5f,  0.5f,  0.5f,
+
+    0.5f,  0.5f,  0.5f,
+    -0.5f,  0.5f,  0.5f,
+    -0.5f, -0.5f,  0.5f,
+
+    // Back face
+    -0.5f, -0.5f, -0.5f,
+    -0.5f,  0.5f, -0.5f,
+    0.5f,  0.5f, -0.5f,
+
+    0.5f,  0.5f, -0.5f,
+    0.5f, -0.5f, -0.5f,
+    -0.5f, -0.5f, -0.5f,
+
+    // Left face
+    -0.5f, -0.5f, -0.5f,
+    -0.5f, -0.5f,  0.5f,
+    -0.5f,  0.5f,  0.5f,
+
+    -0.5f,  0.5f,  0.5f,
+    -0.5f,  0.5f, -0.5f,
+    -0.5f, -0.5f, -0.5f,
+
+    // Right face
+    0.5f, -0.5f, -0.5f,
+    0.5f,  0.5f, -0.5f,
+    0.5f,  0.5f,  0.5f,
+
+    0.5f,  0.5f,  0.5f,
+    0.5f, -0.5f,  0.5f,
+    0.5f, -0.5f, -0.5f,
+
+    // Top face
+    -0.5f,  0.5f, -0.5f,
+    -0.5f,  0.5f,  0.5f,
+    0.5f,  0.5f,  0.5f,
+
+    0.5f,  0.5f,  0.5f,
+    0.5f,  0.5f, -0.5f,
+    -0.5f,  0.5f, -0.5f,
+
+    // Bottom face
+    -0.5f, -0.5f, -0.5f,
+    0.5f, -0.5f, -0.5f,
+    0.5f, -0.5f,  0.5f,
+
+    0.5f, -0.5f,  0.5f,
+    -0.5f, -0.5f,  0.5f,
+    -0.5f, -0.5f, -0.5f
 };
+
+
 
 int main(void)
 {
@@ -83,7 +152,7 @@ int main(void)
             display,
             root,
             100, 100,
-            800, 600,
+            win_width, win_height,
             0,
             visual->depth,
             InputOutput,
@@ -211,21 +280,21 @@ int main(void)
     pglGenBuffers(1, &triangle_vbo);
     pglBindVertexArray(triangle_vao);
     pglBindBuffer(GL_ARRAY_BUFFER, triangle_vbo);
-    pglBufferData(GL_ARRAY_BUFFER, sizeof(triangle_vertices), triangle_vertices, GL_STATIC_DRAW);
+    pglBufferData(GL_ARRAY_BUFFER, sizeof(cube_vertices), cube_vertices, GL_STATIC_DRAW);
 
     pglVertexAttribPointer(
             0, // location 0 in the shader
-            2, // vec2
+            3, // vec3
             GL_FLOAT,
             GL_FALSE,
-            2*sizeof(float), // stride
+            3*sizeof(float), // stride
             (void*)0
             );
     pglEnableVertexAttribArray(0);
 
-
-
     glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
+
+    double start = now_seconds();
 
     int running = 1;
     while (running) {
@@ -236,18 +305,46 @@ int main(void)
             if (event.type == KeyPress) {
                 running = 0;
             } else if (event.type == ConfigureNotify) {
+                win_width = event.xconfigure.width;
+                win_height = event.xconfigure.height;
                 glViewport(0, 0, event.xconfigure.width, event.xconfigure.height);
             }
         }
 
+        // TODO: figure out why/when this should be called based on what is
+        // being drawn?
+        //
+        // should this be in the loop at all?
+        glEnable(GL_DEPTH_TEST);
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         pglUseProgram(triangle_program);
+
         GLint colorLoc = pglGetUniformLocation(triangle_program, "uColor");
         pglUniform4f(colorLoc, 1.0f, 0.2f, 0.2f, 1.0f);
+
+        GLuint angleLoc = pglGetUniformLocation(triangle_program, "uAngle");
+
+        double t = (now_seconds() - start);
+        float angle = (float)t;
+
+        pglUniform1f(angleLoc, angle);
+
+        GLint mvpLoc = pglGetUniformLocation(triangle_program, "uMVP");
+
+        float aspect = (float)win_width / (float)win_height;
+
+        Mat4 model = mat4_translate(0.0f, 0.0f, -2.5f);
+        Mat4 view = mat4_identity();
+        Mat4 projection = mat4_perspective(45.0f * 3.1415926f / 180.0f, aspect, 0.1f, 100.0f);
+        Mat4 mvp = mat4_mul(projection, mat4_mul(view, model));
+
+        pglUniformMatrix4fv(mvpLoc, 1, GL_FALSE, mvp.m);
+
         pglBindVertexArray(triangle_vao);
 
-        pglDrawArrays(GL_TRIANGLES, 0, 3);
+        pglDrawArrays(GL_TRIANGLES, 0, 36);
 
         glXSwapBuffers(display, window);
     }

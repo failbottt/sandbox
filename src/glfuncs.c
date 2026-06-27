@@ -22,6 +22,10 @@ GLVERTEXATTRIBPOINTERPROC pglVertexAttribPointer = NULL;
 GLENABLEVERTEXATTRIBARRAYPROC pglEnableVertexAttribArray = NULL;
 GLDRAWARRAYSPROC pglDrawArrays = NULL;
 GLUSEPROGRAMPROC pglUseProgram = NULL;
+GLGETUNIFORMLOCATIONPROC pglGetUniformLocation = NULL;
+GLUNIFORM4FPROC pglUniform4f = NULL;
+GLUNIFORMMATRIX4FVPROC pglUniformMatrix4fv = NULL;
+GLUNIFORM1FPROC pglUniform1f = NULL;
 
 static void load_gl_functions()
 {
@@ -62,4 +66,13 @@ static void load_gl_functions()
     pglDrawArrays = X(GLDRAWARRAYSPROC, "glDrawArrays");
 
     pglUseProgram = X(GLUSEPROGRAMPROC, "glUseProgram");
+
+    pglGetUniformLocation = X(GLGETUNIFORMLOCATIONPROC, "glGetUniformLocation");
+
+    pglUniform4f = X(GLUNIFORM4FPROC, "glUniform4f");
+
+    pglUniformMatrix4fv = X(GLUNIFORMMATRIX4FVPROC, "glUniformMatrix4fv");
+
+    pglUniform1f = X(GLUNIFORM1FPROC, "glUniform1f");
+
 }
