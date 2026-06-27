@@ -15,8 +15,10 @@ int win_height = 600;
 const char *triangle_vertex_shader_source =
 "#version 460 core\n"
 "layout(location = 0) in vec3 aPos;\n"
+"layout(location = 1) in vec4 aColor;\n"
 "uniform float uAngle;\n"
 "uniform mat4 uMVP;\n"
+"out vec4 vColor;\n"
 "void main() {\n"
 "   float c = cos(uAngle);\n"
 "   float s = sin(uAngle);\n"
@@ -29,70 +31,71 @@ const char *triangle_vertex_shader_source =
 "       ); \n"
 "\n"
 "   gl_Position = uMVP * rotY * vec4(aPos, 1.0);\n"
+"   vColor = aColor;\n"
 "}";
 
 const char *triangle_fragment_shader_source =
 "#version 460 core\n"
 "out vec4 FragColor;\n"
-"uniform vec4 uColor;\n"
+"in vec4 vColor;\n"
 "void main() {\n"
-"    FragColor = uColor;\n"
+"    FragColor = vColor;\n"
 "}";
 
 float cube_vertices[] = {
-    // Front face
-    -0.5f, -0.5f,  0.5f,
-    0.5f, -0.5f,  0.5f,
-    0.5f,  0.5f,  0.5f,
+    // Front face: red
+    -0.5f, -0.5f,  0.5f, 1.0f, 0.2f, 0.2f, 1.0f,
+     0.5f, -0.5f,  0.5f, 1.0f, 0.2f, 0.2f, 1.0f,
+     0.5f,  0.5f,  0.5f, 1.0f, 0.2f, 0.2f, 1.0f,
 
-    0.5f,  0.5f,  0.5f,
-    -0.5f,  0.5f,  0.5f,
-    -0.5f, -0.5f,  0.5f,
+     0.5f,  0.5f,  0.5f, 1.0f, 0.2f, 0.2f, 1.0f,
+    -0.5f,  0.5f,  0.5f, 1.0f, 0.2f, 0.2f, 1.0f,
+    -0.5f, -0.5f,  0.5f, 1.0f, 0.2f, 0.2f, 1.0f,
 
-    // Back face
-    -0.5f, -0.5f, -0.5f,
-    -0.5f,  0.5f, -0.5f,
-    0.5f,  0.5f, -0.5f,
+    // Back face: green
+    -0.5f, -0.5f, -0.5f, 0.2f, 1.0f, 0.2f, 1.0f,
+    -0.5f,  0.5f, -0.5f, 0.2f, 1.0f, 0.2f, 1.0f,
+     0.5f,  0.5f, -0.5f, 0.2f, 1.0f, 0.2f, 1.0f,
 
-    0.5f,  0.5f, -0.5f,
-    0.5f, -0.5f, -0.5f,
-    -0.5f, -0.5f, -0.5f,
+     0.5f,  0.5f, -0.5f, 0.2f, 1.0f, 0.2f, 1.0f,
+     0.5f, -0.5f, -0.5f, 0.2f, 1.0f, 0.2f, 1.0f,
+    -0.5f, -0.5f, -0.5f, 0.2f, 1.0f, 0.2f, 1.0f,
 
-    // Left face
-    -0.5f, -0.5f, -0.5f,
-    -0.5f, -0.5f,  0.5f,
-    -0.5f,  0.5f,  0.5f,
+    // Left face: blue
+    -0.5f, -0.5f, -0.5f, 0.2f, 0.2f, 1.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f, 0.2f, 0.2f, 1.0f, 1.0f,
+    -0.5f,  0.5f,  0.5f, 0.2f, 0.2f, 1.0f, 1.0f,
 
-    -0.5f,  0.5f,  0.5f,
-    -0.5f,  0.5f, -0.5f,
-    -0.5f, -0.5f, -0.5f,
+    -0.5f,  0.5f,  0.5f, 0.2f, 0.2f, 1.0f, 1.0f,
+    -0.5f,  0.5f, -0.5f, 0.2f, 0.2f, 1.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f, 0.2f, 0.2f, 1.0f, 1.0f,
 
-    // Right face
-    0.5f, -0.5f, -0.5f,
-    0.5f,  0.5f, -0.5f,
-    0.5f,  0.5f,  0.5f,
+    // Right face: yellow
+    0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 0.2f, 1.0f,
+    0.5f,  0.5f, -0.5f, 1.0f, 1.0f, 0.2f, 1.0f,
+    0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 0.2f, 1.0f,
 
-    0.5f,  0.5f,  0.5f,
-    0.5f, -0.5f,  0.5f,
-    0.5f, -0.5f, -0.5f,
+    0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 0.2f, 1.0f,
+    0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 0.2f, 1.0f,
+    0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 0.2f, 1.0f,
 
-    // Top face
-    -0.5f,  0.5f, -0.5f,
-    -0.5f,  0.5f,  0.5f,
-    0.5f,  0.5f,  0.5f,
+    // Top face: magenta
+    -0.5f,  0.5f, -0.5f, 1.0f, 0.2f, 1.0f, 1.0f,
+    -0.5f,  0.5f,  0.5f, 1.0f, 0.2f, 1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f, 1.0f, 0.2f, 1.0f, 1.0f,
 
-    0.5f,  0.5f,  0.5f,
-    0.5f,  0.5f, -0.5f,
-    -0.5f,  0.5f, -0.5f,
+     0.5f,  0.5f,  0.5f, 1.0f, 0.2f, 1.0f, 1.0f,
+     0.5f,  0.5f, -0.5f, 1.0f, 0.2f, 1.0f, 1.0f,
+    -0.5f,  0.5f, -0.5f, 1.0f, 0.2f, 1.0f, 1.0f,
 
-    // Bottom face
-    -0.5f, -0.5f, -0.5f,
-    0.5f, -0.5f, -0.5f,
-    0.5f, -0.5f,  0.5f,
+    // Bottom face: cyan
+    -0.5f, -0.5f, -0.5f, 0.2f, 1.0f, 1.0f, 1.0f,
+     0.5f, -0.5f, -0.5f, 0.2f, 1.0f, 1.0f, 1.0f,
+     0.5f, -0.5f,  0.5f, 0.2f, 1.0f, 1.0f, 1.0f,
 
-    0.5f, -0.5f,  0.5f,
-    -0.5f, -0.5f,  0.5f,
-    -0.5f, -0.5f, -0.5f
+     0.5f, -0.5f,  0.5f, 0.2f, 1.0f, 1.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f, 0.2f, 1.0f, 1.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f, 0.2f, 1.0f, 1.0f, 1.0f
 };
 
 
@@ -287,10 +290,19 @@ int main(void)
             3, // vec3
             GL_FLOAT,
             GL_FALSE,
-            3*sizeof(float), // stride
+            7*sizeof(float), // stride
             (void*)0
             );
+    pglVertexAttribPointer(
+            1, // location 1 in the shader
+            4, // vec4
+            GL_FLOAT,
+            GL_FALSE,
+            7*sizeof(float), // stride
+            (void*)(3*sizeof(float))
+            );
     pglEnableVertexAttribArray(0);
+    pglEnableVertexAttribArray(1);
 
     glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
 
@@ -321,8 +333,8 @@ int main(void)
 
         pglUseProgram(triangle_program);
 
-        GLint colorLoc = pglGetUniformLocation(triangle_program, "uColor");
-        pglUniform4f(colorLoc, 1.0f, 0.2f, 0.2f, 1.0f);
+        // GLint colorLoc = pglGetUniformLocation(triangle_program, "uColor");
+        // pglUniform4f(colorLoc, 1.0f, 0.2f, 0.2f, 1.0f);
 
         GLuint angleLoc = pglGetUniformLocation(triangle_program, "uAngle");
 
