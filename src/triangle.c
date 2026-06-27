@@ -14,84 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef GLuint (*GLCREATESHADERPROC)(GLenum type);
-typedef void (*GLSHADERSOURCEPROC)(GLuint shader, GLsizei count, const GLchar **string, GLint *length);
-typedef void (*GLCOMPILESHADERPROC)(GLuint shader);
-typedef void (*GLGETSHADERIVPROC)(GLuint shader,
-        GLenum pname,
-        GLint *params
-        );
-typedef void (*GLGETSHADERINFOLOGPROC)(
-        GLuint shader,
-        GLsizei maxLength,
-        GLsizei *length,
-        GLchar *infoLog
-        );
-
-typedef GLuint (*GLCREATEPROGRAMPROC)(void);
-
-typedef void (*GLATTACHSHADERPROC)(
-        GLuint program,
-        GLuint shader
-        );
-
-typedef void (*GLLINKPROGRAMPROC)(GLuint program);
-
-typedef void (*GLGETPROGRAMIVPROC)(
-        GLuint program,
-        GLenum pname,
-        GLint *params
-        );
-
-typedef void (*GLGETPROGRAMINFOLOGPROC)(
-        GLuint program,
-        GLsizei maxLength,
-        GLsizei *length,
-        GLchar *infoLog
-        );
-
-typedef void (*GLGENVERTEXARRAYSPROC) (
-        GLsizei n,
-        GLuint *arrays
-        );
-
-typedef void (*GLGENBUFFERSPROC) (
-        GLsizei n,
-        GLuint * buffers
-        );
-
-typedef void (*GLBINDVERTEXARRAYPROC)(GLuint array);
-
-typedef void (*GLBINDBUFFERPROC)(
-        GLenum target,
-        GLuint buffer
-        );
-
-typedef void (*GLBUFFERDATAPROC) (
-        GLenum target,
-        GLsizeiptr size,
-        const GLvoid * data,
-        GLenum usage
-        );
-
-typedef void (*GLVERTEXATTRIBPOINTERPROC)(
-        GLuint index,
-        GLint size,
-        GLenum type,
-        GLboolean normalized,
-        GLsizei stride,
-        const GLvoid * pointer
-        );
-
-typedef void (*GLENABLEVERTEXATTRIBARRAYPROC)(GLuint index);
-
-typedef void (*GLDRAWARRAYSPROC)(
-        GLenum mode,
-        GLint first,
-        GLsizei count
-        );
-
-typedef void (*GLUSEPROGRAMPROC)(GLuint program);
+#include "glfuncs.c"
 
 const char *triangle_vertex_shader_source =
 "#version 460 core\n"
@@ -226,90 +149,63 @@ int main(void)
     }
 
     // load gl functions
-    GLCREATESHADERPROC glCreateShader = (GLCREATESHADERPROC)glXGetProcAddressARB((const GLubyte*)"glCreateShader");
-    GLSHADERSOURCEPROC glShaderSource = (GLSHADERSOURCEPROC)glXGetProcAddressARB((const GLubyte*)"glShaderSource");
-    GLCOMPILESHADERPROC glCompileShader = (GLCOMPILESHADERPROC)glXGetProcAddressARB((const GLubyte*)"glCompileShader");
-    GLGETSHADERIVPROC glGetShaderiv = (GLGETSHADERIVPROC)glXGetProcAddressARB((const GLubyte*)"glGetShaderiv");
-    GLGETSHADERINFOLOGPROC glGetShaderInfoLog = (GLGETSHADERINFOLOGPROC)glXGetProcAddressARB((const GLubyte*)"glGetShaderInfoLog");
-    GLCREATEPROGRAMPROC glCreateProgram = (GLCREATEPROGRAMPROC)glXGetProcAddressARB((const GLubyte*)"glCreateProgram");
-    GLATTACHSHADERPROC glAttachShader = (GLATTACHSHADERPROC)glXGetProcAddressARB((const GLubyte*)"glAttachShader");
-    GLLINKPROGRAMPROC glLinkProgram = (GLLINKPROGRAMPROC)glXGetProcAddressARB((const GLubyte*)"glLinkProgram");
-    GLGETPROGRAMIVPROC glGetProgramiv = (GLGETPROGRAMIVPROC)glXGetProcAddressARB((const GLubyte*)"glGetProgramiv");
-    GLGETPROGRAMINFOLOGPROC glGetProgramInfoLog = (GLGETPROGRAMINFOLOGPROC)glXGetProcAddressARB((const GLubyte*)"glGetProgramInfoLog");
-
-    GLGENVERTEXARRAYSPROC glGenVertexArrays = (GLGENVERTEXARRAYSPROC)glXGetProcAddressARB((const GLubyte*)"glGenVertexArrays");
-
-    GLGENBUFFERSPROC glGenBuffers = (GLGENBUFFERSPROC)glXGetProcAddressARB((const GLubyte*)"glGenBuffers");
-
-    GLBINDVERTEXARRAYPROC glBindVertexArray = (GLBINDVERTEXARRAYPROC)glXGetProcAddressARB((const GLubyte*)"glBindVertexArray");
-
-    GLBINDBUFFERPROC glBindBuffer = (GLBINDBUFFERPROC)glXGetProcAddressARB((const GLubyte*)"glBindBuffer");
-
-    GLBUFFERDATAPROC glBufferData = (GLBUFFERDATAPROC)glXGetProcAddressARB((const GLubyte*)"glBufferData");
-
-    GLVERTEXATTRIBPOINTERPROC glVertexAttribPointer = (GLVERTEXATTRIBPOINTERPROC)glXGetProcAddressARB((const GLubyte*)"glVertexAttribPointer");
-
-    GLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray = (GLENABLEVERTEXATTRIBARRAYPROC)glXGetProcAddressARB((const GLubyte*)"glEnableVertexAttribArray");
-
-    GLDRAWARRAYSPROC glDrawArrays = (GLDRAWARRAYSPROC)glXGetProcAddressARB((const GLubyte*)"glDrawArrays");
-
-    GLUSEPROGRAMPROC glUseProgram = (GLUSEPROGRAMPROC)glXGetProcAddressARB((const GLubyte*)"glUseProgram");
+    load_gl_functions();
 
     // compile trangle shaders and create triangle program
-    GLuint triangle_vert_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(
+    GLuint triangle_vert_shader = pglCreateShader(GL_VERTEX_SHADER);
+    pglShaderSource(
             triangle_vert_shader,
             1,
             &triangle_vertex_shader_source,
             NULL
             );
-    glCompileShader(triangle_vert_shader);
+    pglCompileShader(triangle_vert_shader);
 
     GLint vertex_compiled;
-    glGetShaderiv(triangle_vert_shader, GL_COMPILE_STATUS, &vertex_compiled);
+    pglGetShaderiv(triangle_vert_shader, GL_COMPILE_STATUS, &vertex_compiled);
     if (vertex_compiled != GL_TRUE)
     {
         GLsizei log_length = 0;
         GLchar message[1024];
-        glGetShaderInfoLog(triangle_vert_shader, 1024, &log_length, message);
+        pglGetShaderInfoLog(triangle_vert_shader, 1024, &log_length, message);
         // Write the error to a log
         fprintf(stderr, "triangle vertex shader compile error: %s", message);
         exit(1);
     }
 
-    GLuint triangle_frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(
+    GLuint triangle_frag_shader = pglCreateShader(GL_FRAGMENT_SHADER);
+    pglShaderSource(
             triangle_frag_shader,
             1,
             &triangle_fragment_shader_source,
             NULL
             );
-    glCompileShader(triangle_frag_shader);
+    pglCompileShader(triangle_frag_shader);
 
     GLint fragment_compiled;
-    glGetShaderiv(triangle_frag_shader, GL_COMPILE_STATUS, &fragment_compiled);
+    pglGetShaderiv(triangle_frag_shader, GL_COMPILE_STATUS, &fragment_compiled);
     if (fragment_compiled != GL_TRUE)
     {
         GLsizei log_length = 0;
         GLchar message[1024];
-        glGetShaderInfoLog(triangle_frag_shader, 1024, &log_length, message);
+        pglGetShaderInfoLog(triangle_frag_shader, 1024, &log_length, message);
         // Write the error to a log
         fprintf(stderr, "triangle frag shader compile error: %s", message);
         exit(1);
     }
 
-    GLuint triangle_program = glCreateProgram();
-    glAttachShader(triangle_program, triangle_vert_shader);
-    glAttachShader(triangle_program, triangle_frag_shader);
-    glLinkProgram(triangle_program);
+    GLuint triangle_program = pglCreateProgram();
+    pglAttachShader(triangle_program, triangle_vert_shader);
+    pglAttachShader(triangle_program, triangle_frag_shader);
+    pglLinkProgram(triangle_program);
 
     GLint triangle_program_linked;
-    glGetProgramiv(triangle_program, GL_LINK_STATUS, &triangle_program_linked);
+    pglGetProgramiv(triangle_program, GL_LINK_STATUS, &triangle_program_linked);
     if (triangle_program_linked != GL_TRUE)
     {
         GLsizei log_length = 0;
         GLchar message[1024];
-        glGetProgramInfoLog(triangle_program, 1024, &log_length, message);
+        pglGetProgramInfoLog(triangle_program, 1024, &log_length, message);
         // Write the error to a log
         fprintf(stderr, "triangle program link error: %s", message);
         exit(1);
@@ -319,13 +215,13 @@ int main(void)
     // - the VAO stores the rules for how to read those bytes
     GLuint triangle_vao, triangle_vbo;
 
-    glGenVertexArrays(1, &triangle_vao);
-    glGenBuffers(1, &triangle_vbo);
-    glBindVertexArray(triangle_vao);
-    glBindBuffer(GL_ARRAY_BUFFER, triangle_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(triangle_vertices), triangle_vertices, GL_STATIC_DRAW);
+    pglGenVertexArrays(1, &triangle_vao);
+    pglGenBuffers(1, &triangle_vbo);
+    pglBindVertexArray(triangle_vao);
+    pglBindBuffer(GL_ARRAY_BUFFER, triangle_vbo);
+    pglBufferData(GL_ARRAY_BUFFER, sizeof(triangle_vertices), triangle_vertices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(
+    pglVertexAttribPointer(
             0, // location 0 in the shader
             2, // vec2
             GL_FLOAT,
@@ -333,7 +229,7 @@ int main(void)
             2*sizeof(float), // stride
             (void*)0
             );
-    glEnableVertexAttribArray(0);
+    pglEnableVertexAttribArray(0);
 
 
 
@@ -354,9 +250,9 @@ int main(void)
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glUseProgram(triangle_program);
-        glBindVertexArray(triangle_vao);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        pglUseProgram(triangle_program);
+        pglBindVertexArray(triangle_vao);
+        pglDrawArrays(GL_TRIANGLES, 0, 3);
 
         glXSwapBuffers(display, window);
     }
