@@ -4,14 +4,48 @@
 #include <GL/glx.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <X11/extensions/XInput2.h>
+#include <X11/extensions/Xfixes.h>
+#include <X11/keysym.h>
 
 #include "glfuncs.c"
 #include "math.c"
 #include "time.c"
 #include "camera.c"
+#include "x11.c"
 
-int win_width = 800;
-int win_height = 600;
+static void update_camera_position(
+        Vec3 *cameraPos,
+        Vec3 cameraFront,
+        Vec3 cameraUp,
+        int keyW,
+        int keyA,
+        int keyS,
+        int keyD,
+        float moveSpeed,
+        float dt
+        ) {
+    Vec3 right = vec3_normalize(vec3_cross(cameraFront, cameraUp));
+    float velocity = moveSpeed * dt;
+
+    if (keyW) {
+        *cameraPos = vec3_add(*cameraPos, vec3_scale(cameraFront, velocity));
+    }
+    if (keyS) {
+        *cameraPos = vec3_sub(*cameraPos, vec3_scale(cameraFront, velocity));
+    }
+    if (keyA) {
+        *cameraPos = vec3_sub(*cameraPos, vec3_scale(right, velocity));
+    }
+    if (keyD) {
+        *cameraPos = vec3_add(*cameraPos, vec3_scale(right, velocity));
+    }
+}
+
+
+int window_width = 1920;
+int window_height = 1080;
+
 
 // up and down look angle
 float pitch = 0.0f;
@@ -25,6 +59,7 @@ float cameraPos;
 // direction the camera is looking
 float cameraFront;
 
+MouseLook ml = {0};
 
 float mouse_sensitivity = .0002f;
 float x_mouse_pos = 0.0;
@@ -168,13 +203,13 @@ int main(void)
 
     XSetWindowAttributes swa;
     swa.colormap = colormap;
-    swa.event_mask = ExposureMask | KeyPressMask | StructureNotifyMask | PointerMotionMask;
+    swa.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | StructureNotifyMask | PointerMotionMask;
 
     Window window = XCreateWindow(
             display,
             root,
             100, 100,
-            win_width, win_height,
+            window_width, window_height,
             0,
             visual->depth,
             InputOutput,
@@ -327,36 +362,92 @@ int main(void)
 
     double start = now_seconds();
 
+    int key_w = 0;
+    int key_a = 0;
+    int key_s = 0;
+    int key_d = 0;
+
+    float movement_speed = 10.0f;
+
+    ml.sensitivity = 0.002f;
+    ml.yaw = -90.0f;
+    ml.pitch = 0.0f;
+
+    init_raw_mouse(display, window, &ml);
+    enter_mouse_look(&ml);
+
+    float last_time = now_seconds();
+
     int running = 1;
-    while (running) {
-        while (XPending(display)) {
+
+        Vec3 cameraPos = { 0.0f, 0.0f, 3.0f };
+        Vec3 cameraUp = { 0.0f, 1.0f, 0.0f };
+    while (running)
+    {
+        while (XPending(display))
+        {
             XEvent event;
             XNextEvent(display, &event);
 
-            if (event.type == KeyPress) {
-                running = 0;
+            if  (
+                    event.type == GenericEvent &&
+                    event.xcookie.extension == ml.xi_opcode &&
+                    XGetEventData(display, &event.xcookie)
+                )
+            {
+                if (event.xcookie.evtype == XI_RawMotion)
+                {
+                    XIRawEvent *raw = (XIRawEvent *)event.xcookie.data;
+                    if (raw->valuators.mask_len == 0) {
+                        XFreeEventData(display, &event.xcookie);
+                        break;
+                    }
+
+                    double deltaX = 0.0f;
+                    double deltaY = 0.0f;
+
+                    /* check if relative motion data exists where we think it does */
+                    if (XIMaskIsSet(raw->valuators.mask, 0) != 0)
+                        deltaX += raw->raw_values[0];
+                    if (XIMaskIsSet(raw->valuators.mask, 1) != 0)
+                        deltaY += raw->raw_values[1];
+
+                    update_yaw_pitch(deltaX, deltaY, ml.sensitivity, &ml.yaw, &ml.pitch);
+
+                    //The mouse must be moved back to the center when it moves
+                    XWarpPointer(display, None, window, 0, 0, 0, 0, window_width / 2, window_height / 2);
+                }
+
+                XFreeEventData(display, &event.xcookie);
+            }
+
+            if (event.type == KeyPress)
+            {
+                KeySym sym = XLookupKeysym(&event.xkey, 0);
+                if (sym == XK_w) key_w = 1;
+                if (sym == XK_a) key_a = 1;
+                if (sym == XK_s) key_s = 1;
+                if (sym == XK_d) key_d = 1;
+
+                if (sym == XK_Escape) running = 0;
+            }
+            if (event.type == KeyRelease)
+            {
+                KeySym sym = XLookupKeysym(&event.xkey, 0);
+                if (sym == XK_w) key_w = 0;
+                if (sym == XK_a) key_a = 0;
+                if (sym == XK_s) key_s = 0;
+                if (sym == XK_d) key_d = 0;
+
             }
             else if (event.type == MotionNotify)
             {
-                float last_mouse_x = x_mouse_pos;
-                float last_mouse_y = y_mouse_pos;
-                float current_mouse_x = (float)event.xmotion.x;
-                float current_mouse_y = (float)event.xmotion.y;
-
-                float dx = (float)(current_mouse_x - last_mouse_x);
-                float dy = (float)(current_mouse_y - last_mouse_y);
-
-                update_yaw_pitch(dx, dy, mouse_sensitivity, &yaw, &pitch);
-
-                x_mouse_pos = event.xmotion.x;
-                y_mouse_pos = event.xmotion.y;
-
-                fprintf(stderr, "x: %f, y: %f\n", x_mouse_pos, y_mouse_pos);
+                // fprintf(stderr, "MotionNotify\n");
             }
             else if (event.type == ConfigureNotify)
             {
-                win_width = event.xconfigure.width;
-                win_height = event.xconfigure.height;
+                window_width = event.xconfigure.width;
+                window_height = event.xconfigure.height;
                 glViewport(0, 0, event.xconfigure.width, event.xconfigure.height);
             }
         }
@@ -383,11 +474,28 @@ int main(void)
 
         GLint mvpLoc = pglGetUniformLocation(triangle_program, "uMVP");
 
-        Vec3 cameraPos = { 0.0f, 0.0f, 3.0f };
-        Vec3 cameraUp = { 0.0f, 1.0f, 0.0f };
-        Vec3 cameraFront = camera_front_from_angles(yaw, pitch);
+        Vec3 cameraFront = camera_front_from_angles(ml.yaw, ml.pitch);
 
-        float aspect = (float)win_width / (float)win_height;
+        double now = now_seconds();
+        float dt = (float)(now - last_time);
+        last_time = now;
+
+        update_camera_position(
+                &cameraPos,
+                cameraFront,
+                cameraUp,
+                key_w,
+                key_a,
+                key_s,
+                key_d,
+                3.0f,
+                dt
+                );
+        // if (key_a)
+        // if (key_s)
+        // if (key_d)
+
+        float aspect = (float)window_width / (float)window_height;
         Mat4 model = mat4_translate(0.0f, 0.0f, -2.5f);
         Mat4 view = mat4_look_at(cameraPos, vec3_add(cameraPos, cameraFront), cameraUp);
         Mat4 projection = mat4_perspective(45.0f * 3.1415926f / 180.0f, aspect, 0.1f, 100.0f);

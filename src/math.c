@@ -97,6 +97,11 @@ static float vec3_dot(Vec3 a, Vec3 b)
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
+static float vec3_len(Vec3 v)
+{
+    return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+}
+
 static Vec3 vec3_cross(Vec3 a, Vec3 b)
 {
     Vec3 r = {

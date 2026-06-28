@@ -18,6 +18,11 @@ for arg in "$@"; do
     fi
 
     if [ "$arg" = "sandbox" ]; then
-        $CC -g ./src/sandbox.c $FILES -o ./build/sandbox -lX11 -lGL -lm
+        $CC -g ./src/sandbox.c $FILES -o ./build/sandbox \
+        -lX11 \
+        -lGL \
+        -lm \
+        -lXi \
+        -lXfixes
     fi
 done
