@@ -26,6 +26,7 @@ GLGETUNIFORMLOCATIONPROC pglGetUniformLocation = NULL;
 GLUNIFORM4FPROC pglUniform4f = NULL;
 GLUNIFORMMATRIX4FVPROC pglUniformMatrix4fv = NULL;
 GLUNIFORM1FPROC pglUniform1f = NULL;
+GLUNIFORM3FPROC pglUniform3f = NULL;
 
 static void load_gl_functions()
 {
@@ -74,5 +75,7 @@ static void load_gl_functions()
     pglUniformMatrix4fv = X(GLUNIFORMMATRIX4FVPROC, "glUniformMatrix4fv");
 
     pglUniform1f = X(GLUNIFORM1FPROC, "glUniform1f");
+
+    pglUniform3f = X(GLUNIFORM3FPROC, "glUniform3f");
 
 }

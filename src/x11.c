@@ -63,16 +63,3 @@ static void enter_mouse_look(MouseLook *ml)
             );
     ml->enabled = 1;
 }
-
-static void handle_xi_event(Display *dpy, XEvent *event, MouseLook *ml)
-{
-    if (event->xcookie.extension != ml->xi_opcode) {
-        return;
-    }
-
-    if (!XGetEventData(dpy, &event->xcookie)) {
-        return;
-    }
-
-}
-

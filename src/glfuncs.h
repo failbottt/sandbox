@@ -104,3 +104,10 @@ typedef void (*GLUNIFORMMATRIX4FVPROC)(
         );
 
 typedef void (*GLUNIFORM1FPROC)(GLuint program, GLfloat value);
+
+typedef void (*GLUNIFORM3FPROC)(
+        GLint location,
+        GLfloat v0,
+        GLfloat v1,
+        GLfloat v2
+        );

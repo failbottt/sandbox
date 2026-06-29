@@ -14,32 +14,38 @@
 #include "camera.c"
 #include "x11.c"
 
+int key_w = 0;
+int key_a = 0;
+int key_s = 0;
+int key_d = 0;
+int key_space = 0;
+
 static void update_camera_position(
         Vec3 *cameraPos,
         Vec3 cameraFront,
         Vec3 cameraUp,
-        int keyW,
-        int keyA,
-        int keyS,
-        int keyD,
         float moveSpeed,
         float dt
         ) {
     Vec3 right = vec3_normalize(vec3_cross(cameraFront, cameraUp));
     float velocity = moveSpeed * dt;
 
-    if (keyW) {
+    if (key_w) {
         *cameraPos = vec3_add(*cameraPos, vec3_scale(cameraFront, velocity));
     }
-    if (keyS) {
+    if (key_s) {
         *cameraPos = vec3_sub(*cameraPos, vec3_scale(cameraFront, velocity));
     }
-    if (keyA) {
+    if (key_a) {
         *cameraPos = vec3_sub(*cameraPos, vec3_scale(right, velocity));
     }
-    if (keyD) {
+    if (key_d) {
         *cameraPos = vec3_add(*cameraPos, vec3_scale(right, velocity));
     }
+
+    // if (key_space) {
+    //     *cameraPos = vec3_add(*cameraPos, vec3_scale(right, velocity));
+    // }
 }
 
 
@@ -61,18 +67,20 @@ float cameraFront;
 
 MouseLook ml = {0};
 
-float mouse_sensitivity = .0002f;
-float x_mouse_pos = 0.0;
-float y_mouse_pos = 0.0;
-
 
 const char *triangle_vertex_shader_source =
 "#version 460 core\n"
 "layout(location = 0) in vec3 aPos;\n"
 "layout(location = 1) in vec4 aColor;\n"
+"layout(location = 2) in vec3 aNormal;\n"
+"\n"
 "uniform float uAngle;\n"
 "uniform mat4 uMVP;\n"
+"\n"
 "out vec4 vColor;\n"
+"out vec3 vNormal;\n"
+"out vec3 vFragPos;\n"
+"\n"
 "void main() {\n"
 "   float c = cos(uAngle);\n"
 "   float s = sin(uAngle);\n"
@@ -84,72 +92,108 @@ const char *triangle_vertex_shader_source =
 "       0.0, 0.0, 0.0, 1.0\n"
 "       ); \n"
 "\n"
-"   gl_Position = uMVP * rotY * vec4(aPos, 1.0);\n"
+"   vec4 worldPos = rotY * vec4(aPos, 1.0);\n"
+"   gl_Position = uMVP * worldPos;\n"
 "   vColor = aColor;\n"
+"   vFragPos = worldPos.xyz;\n"
+"   vNormal = mat3(rotY) * aNormal;\n"
 "}";
 
 const char *triangle_fragment_shader_source =
 "#version 460 core\n"
+"\n"
 "out vec4 FragColor;\n"
+"\n"
 "in vec4 vColor;\n"
+"in vec3 vNormal;\n"
+"in vec3 vFragPos;\n"
+"\n"
+"uniform vec3 uLightPos;\n"
+"uniform vec3 uViewPos;\n"
+"\n"
 "void main() {\n"
-"    FragColor = vColor;\n"
+"   vec3 baseColor = vColor.rgb;\n"
+"\n"
+"   vec3 norm = normalize(vNormal);\n"
+"   vec3 lightDir = normalize(uLightPos - vFragPos);\n"
+"\n"
+"   float diff = max(dot(norm, lightDir), 0.0);\n"
+"\n"
+"   float ambientStrength = 0.2;\n"
+"   vec3 ambient = ambientStrength * baseColor;\n"
+"\n"
+"   vec3 diffuse = diff * baseColor;\n"
+"\n"
+"   vec3 result = ambient + diffuse;\n"
+"   FragColor = vec4(result, vColor.a);\n"
 "}";
 
+//- Front face: (0, 0, 1)
+//- Back face: (0, 0, -1)
+//- Left face: (-1, 0, 0)
+//- Right face: (1, 0, 0)
+//- Top face: (0, 1, 0)
+//- Bottom face: (0, -1, 0)
+
+
+
+// verts 3
+// color 4
+// normal 3
 float cube_vertices[] = {
     // Front face: red
-    -0.5f, -0.5f,  0.5f, 1.0f, 0.2f, 0.2f, 1.0f,
-     0.5f, -0.5f,  0.5f, 1.0f, 0.2f, 0.2f, 1.0f,
-     0.5f,  0.5f,  0.5f, 1.0f, 0.2f, 0.2f, 1.0f,
+    -0.5f, -0.5f,  0.5f, 1.0f, 0.2f, 0.2f, 1.0f, 0.0f, 0.0f, 1.0f,
+     0.5f, -0.5f,  0.5f, 1.0f, 0.2f, 0.2f, 1.0f, 0.0f, 0.0f, 1.0f,
+     0.5f,  0.5f,  0.5f, 1.0f, 0.2f, 0.2f, 1.0f, 0.0f, 0.0f, 1.0f,
 
-     0.5f,  0.5f,  0.5f, 1.0f, 0.2f, 0.2f, 1.0f,
-    -0.5f,  0.5f,  0.5f, 1.0f, 0.2f, 0.2f, 1.0f,
-    -0.5f, -0.5f,  0.5f, 1.0f, 0.2f, 0.2f, 1.0f,
+     0.5f,  0.5f,  0.5f, 1.0f, 0.2f, 0.2f, 1.0f, 0.0f, 0.0f, 1.0f,
+    -0.5f,  0.5f,  0.5f, 1.0f, 0.2f, 0.2f, 1.0f, 0.0f, 0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f, 1.0f, 0.2f, 0.2f, 1.0f, 0.0f, 0.0f, 1.0f,
 
     // Back face: green
-    -0.5f, -0.5f, -0.5f, 0.2f, 1.0f, 0.2f, 1.0f,
-    -0.5f,  0.5f, -0.5f, 0.2f, 1.0f, 0.2f, 1.0f,
-     0.5f,  0.5f, -0.5f, 0.2f, 1.0f, 0.2f, 1.0f,
+    -0.5f, -0.5f, -0.5f, 0.2f, 1.0f, 0.2f, 1.0f, 0.0f, 0.0f, -1.0f,
+    -0.5f,  0.5f, -0.5f, 0.2f, 1.0f, 0.2f, 1.0f, 0.0f, 0.0f, -1.0f,
+     0.5f,  0.5f, -0.5f, 0.2f, 1.0f, 0.2f, 1.0f, 0.0f, 0.0f, -1.0f,
 
-     0.5f,  0.5f, -0.5f, 0.2f, 1.0f, 0.2f, 1.0f,
-     0.5f, -0.5f, -0.5f, 0.2f, 1.0f, 0.2f, 1.0f,
-    -0.5f, -0.5f, -0.5f, 0.2f, 1.0f, 0.2f, 1.0f,
+     0.5f,  0.5f, -0.5f, 0.2f, 1.0f, 0.2f, 1.0f, 0.0f, 0.0f, -1.0f,
+     0.5f, -0.5f, -0.5f, 0.2f, 1.0f, 0.2f, 1.0f, 0.0f, 0.0f, -1.0f,
+    -0.5f, -0.5f, -0.5f, 0.2f, 1.0f, 0.2f, 1.0f, 0.0f, 0.0f, -1.0f,
 
     // Left face: blue
-    -0.5f, -0.5f, -0.5f, 0.2f, 0.2f, 1.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f, 0.2f, 0.2f, 1.0f, 1.0f,
-    -0.5f,  0.5f,  0.5f, 0.2f, 0.2f, 1.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f, 0.2f, 0.2f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f,
+    -0.5f, -0.5f,  0.5f, 0.2f, 0.2f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f, 0.2f, 0.2f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f,
 
-    -0.5f,  0.5f,  0.5f, 0.2f, 0.2f, 1.0f, 1.0f,
-    -0.5f,  0.5f, -0.5f, 0.2f, 0.2f, 1.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f, 0.2f, 0.2f, 1.0f, 1.0f,
+    -0.5f,  0.5f,  0.5f, 0.2f, 0.2f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f, 0.2f, 0.2f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f,
+    -0.5f, -0.5f, -0.5f, 0.2f, 0.2f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f,
 
     // Right face: yellow
-    0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 0.2f, 1.0f,
-    0.5f,  0.5f, -0.5f, 1.0f, 1.0f, 0.2f, 1.0f,
-    0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 0.2f, 1.0f,
+    0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 0.2f, 1.0f, 1.0f, 0.0f, 0.0f,
+    0.5f,  0.5f, -0.5f, 1.0f, 1.0f, 0.2f, 1.0f, 1.0f, 0.0f, 0.0f,
+    0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 0.2f, 1.0f, 1.0f, 0.0f, 0.0f,
 
-    0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 0.2f, 1.0f,
-    0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 0.2f, 1.0f,
-    0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 0.2f, 1.0f,
+    0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 0.2f, 1.0f, 1.0f, 0.0f, 0.0f,
+    0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 0.2f, 1.0f, 1.0f, 0.0f, 0.0f,
+    0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 0.2f, 1.0f, 1.0f, 0.0f, 0.0f,
 
     // Top face: magenta
-    -0.5f,  0.5f, -0.5f, 1.0f, 0.2f, 1.0f, 1.0f,
-    -0.5f,  0.5f,  0.5f, 1.0f, 0.2f, 1.0f, 1.0f,
-     0.5f,  0.5f,  0.5f, 1.0f, 0.2f, 1.0f, 1.0f,
+    -0.5f,  0.5f, -0.5f, 1.0f, 0.2f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f, 1.0f, 0.2f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f, 1.0f, 0.2f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f,
 
-     0.5f,  0.5f,  0.5f, 1.0f, 0.2f, 1.0f, 1.0f,
-     0.5f,  0.5f, -0.5f, 1.0f, 0.2f, 1.0f, 1.0f,
-    -0.5f,  0.5f, -0.5f, 1.0f, 0.2f, 1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f, 1.0f, 0.2f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f, 1.0f, 0.2f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f, 1.0f, 0.2f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f,
 
     // Bottom face: cyan
-    -0.5f, -0.5f, -0.5f, 0.2f, 1.0f, 1.0f, 1.0f,
-     0.5f, -0.5f, -0.5f, 0.2f, 1.0f, 1.0f, 1.0f,
-     0.5f, -0.5f,  0.5f, 0.2f, 1.0f, 1.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f, 0.2f, 1.0f, 1.0f, 1.0f, 0.0f, -1.0f, 0.0f,
+     0.5f, -0.5f, -0.5f, 0.2f, 1.0f, 1.0f, 1.0f, 0.0f, -1.0f, 0.0f,
+     0.5f, -0.5f,  0.5f, 0.2f, 1.0f, 1.0f, 1.0f, 0.0f, -1.0f, 0.0f,
 
-     0.5f, -0.5f,  0.5f, 0.2f, 1.0f, 1.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f, 0.2f, 1.0f, 1.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f, 0.2f, 1.0f, 1.0f, 1.0f
+     0.5f, -0.5f,  0.5f, 0.2f, 1.0f, 1.0f, 1.0f, 0.0f, -1.0f, 0.0f,
+    -0.5f, -0.5f,  0.5f, 0.2f, 1.0f, 1.0f, 1.0f, 0.0f, -1.0f, 0.0f,
+    -0.5f, -0.5f, -0.5f, 0.2f, 1.0f, 1.0f, 1.0f, 0.0f, -1.0f, 0.0f
 };
 
 
@@ -344,7 +388,7 @@ int main(void)
             3, // vec3
             GL_FLOAT,
             GL_FALSE,
-            7*sizeof(float), // stride
+            10*sizeof(float), // stride
             (void*)0
             );
     pglVertexAttribPointer(
@@ -352,20 +396,25 @@ int main(void)
             4, // vec4
             GL_FLOAT,
             GL_FALSE,
-            7*sizeof(float), // stride
+            10*sizeof(float), // stride
             (void*)(3*sizeof(float))
             );
+    pglVertexAttribPointer(
+            2, // location 2 in the shader
+            3, // vec3
+            GL_FLOAT,
+            GL_FALSE,
+            10*sizeof(float), // stride
+            (void*)(7*sizeof(float))
+            );
+
     pglEnableVertexAttribArray(0);
     pglEnableVertexAttribArray(1);
+    pglEnableVertexAttribArray(2);
 
     glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
 
     double start = now_seconds();
-
-    int key_w = 0;
-    int key_a = 0;
-    int key_s = 0;
-    int key_d = 0;
 
     float movement_speed = 10.0f;
 
@@ -380,8 +429,10 @@ int main(void)
 
     int running = 1;
 
-        Vec3 cameraPos = { 0.0f, 0.0f, 3.0f };
-        Vec3 cameraUp = { 0.0f, 1.0f, 0.0f };
+    // camera
+    Vec3 cameraPos = { 0.0f, 0.0f, 3.0f };
+    Vec3 cameraUp = { 0.0f, 1.0f, 0.0f };
+
     while (running)
     {
         while (XPending(display))
@@ -428,6 +479,7 @@ int main(void)
                 if (sym == XK_a) key_a = 1;
                 if (sym == XK_s) key_s = 1;
                 if (sym == XK_d) key_d = 1;
+                if (sym == XK_KP_Space) key_space = 1;
 
                 if (sym == XK_Escape) running = 0;
             }
@@ -438,6 +490,7 @@ int main(void)
                 if (sym == XK_a) key_a = 0;
                 if (sym == XK_s) key_s = 0;
                 if (sym == XK_d) key_d = 0;
+                if (sym == XK_KP_Space) key_space = 0;
 
             }
             else if (event.type == MotionNotify)
@@ -465,6 +518,11 @@ int main(void)
         // GLint colorLoc = pglGetUniformLocation(triangle_program, "uColor");
         // pglUniform4f(colorLoc, 1.0f, 0.2f, 0.2f, 1.0f);
 
+
+        GLuint lightingLoc = pglGetUniformLocation(triangle_program, "uLightPos");
+
+        pglUniform3f(lightingLoc, 1.0f, 0.0f, 0.0f);
+
         GLuint angleLoc = pglGetUniformLocation(triangle_program, "uAngle");
 
         double t = (now_seconds() - start);
@@ -484,10 +542,6 @@ int main(void)
                 &cameraPos,
                 cameraFront,
                 cameraUp,
-                key_w,
-                key_a,
-                key_s,
-                key_d,
                 3.0f,
                 dt
                 );
