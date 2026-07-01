@@ -14,6 +14,11 @@
 const int window_width = 1920;
 const int window_height = 1080;
 
+// 10 x 20 board: relative to block_size
+const int block_size = 32;
+const int board_width = 320;
+const int board_height = 640;
+
 int vert_draw_length = 0;
 
 const char *triangle_vertex_shader_source =
@@ -40,6 +45,16 @@ float triangle_vertices[256];// = {
      // 200.5f,  100.5f, // right
      // 150.5f,  50.5f,  // top
 // };
+
+static float board_space_x(float x)
+{
+    return (float)(((float)window_width / 2) - ((float)board_width/2)) + x;
+}
+
+static float board_space_y(float y)
+{
+    return (float)(((float)window_height / 2) - ((float)board_height/2)) + y;
+}
 
 static float *make_quad(
         float *out,
@@ -294,10 +309,10 @@ int main(void)
     RGBA board_color = {0,0,0,0};
     float *board = make_quad(
             triangle_vertices,
-            (float)(((float)window_width / 2) - ((float)320/2)),
-            (float)(((float)window_height / 2) - ((float)640/2)),
-            320,
-            640,
+            (float)(((float)window_width / 2) - ((float)board_width/2)),
+            (float)(((float)window_height / 2) - ((float)board_height/2)),
+            board_width,
+            board_height,
             board_color
             );
 
@@ -306,8 +321,8 @@ int main(void)
     // @todo: transform peices to board space, not screenspace
     float *b1 = make_quad(
             triangle_vertices+vert_draw_length,
-            200.0f,
-            200.0f,
+            board_space_x(0),
+            board_space_y(0),
             32,
             32,
             b1_color
