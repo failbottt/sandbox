@@ -149,3 +149,19 @@ static Mat4 mat4_look_at(Vec3 eye, Vec3 center, Vec3 up)
 
     return r;
 }
+
+static Mat4 mat4_ortho(float left, float right, float bottom, float top, float
+        near_z, float far_z)
+{
+    Mat4 r = {0};
+
+    r.m[0]  =  2.0f / (right - left);
+    r.m[5]  =  2.0f / (top - bottom);
+    r.m[10] = -2.0f / (far_z - near_z);
+    r.m[12] = -(right + left) / (right - left);
+    r.m[13] = -(top + bottom) / (top - bottom);
+    r.m[14] = -(far_z + near_z) / (far_z - near_z);
+    r.m[15] =  1.0f;
+
+    return r;
+}

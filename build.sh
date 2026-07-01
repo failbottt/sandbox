@@ -25,4 +25,13 @@ for arg in "$@"; do
         -lXi \
         -lXfixes
     fi
+
+    if [ "$arg" = "tetris" ]; then
+        $CC -g ./src/tetris.c $FILES -o ./build/tetris \
+        -lX11 \
+        -lGL \
+        -lm \
+        -lXi \
+        -lXfixes
+    fi
 done

@@ -521,7 +521,7 @@ int main(void)
 
         GLuint lightingLoc = pglGetUniformLocation(triangle_program, "uLightPos");
 
-        pglUniform3f(lightingLoc, 1.0f, 0.0f, 0.0f);
+        pglUniform3f(lightingLoc, -1.0f, 0.5f, 1.0f);
 
         GLuint angleLoc = pglGetUniformLocation(triangle_program, "uAngle");
 
