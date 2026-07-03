@@ -40,7 +40,7 @@ const char *triangle_fragment_shader_source =
 "    FragColor = uColor;\n"
 "}";
 
-float triangle_vertices[256];// = {
+float triangle_vertices[1024];// = {
      // 100.0f,  100.5f, // left
      // 200.5f,  100.5f, // right
      // 150.5f,  50.5f,  // top
@@ -48,12 +48,12 @@ float triangle_vertices[256];// = {
 
 static float board_space_x(float x)
 {
-    return (float)(((float)window_width / 2) - ((float)board_width/2)) + x;
+    return (float)(((float)window_width / 2) - ((float)board_width/2)) + (x*block_size);
 }
 
 static float board_space_y(float y)
 {
-    return (float)(((float)window_height / 2) - ((float)board_height/2)) + y;
+    return (float)(((float)window_height / 2) - ((float)board_height/2)) + (y*block_size);
 }
 
 static float *make_quad(
@@ -116,6 +116,36 @@ static float *make_quad(
 
     // @cleanup: just for now but it shouldn't be here
     vert_draw_length += 36;
+
+    return out;
+}
+
+static float *make_quad_with_border(
+        float *out,
+        float x,
+        float y,
+        float width,
+        float height,
+        float border,
+        RGBA border_color,
+        RGBA fill_color
+        )
+{
+    float inner_width = width - (border);
+    float inner_height = height - (border);
+
+    make_quad(out, x, y, width, height, border_color);
+
+    if (inner_width > 0.0f && inner_height > 0.0f) {
+        make_quad(
+                out + 36,
+                x + border,
+                y + border,
+                inner_width,
+                inner_height,
+                fill_color
+                );
+    }
 
     return out;
 }
@@ -316,15 +346,48 @@ int main(void)
             board_color
             );
 
+    RGBA block_border_color = {0.05f, 0.05f, 0.05f, 1.0f};
     RGBA b1_color = {1.0f, 0.0f, 0.0f, 1.0f};
 
     // @todo: transform peices to board space, not screenspace
-    float *b1 = make_quad(
+    float *b1a = make_quad_with_border(
             triangle_vertices+vert_draw_length,
             board_space_x(0),
             board_space_y(0),
             32,
             32,
+            1.0f,
+            block_border_color,
+            b1_color
+            );
+    float *b1b = make_quad_with_border(
+            triangle_vertices+vert_draw_length,
+            board_space_x(0),
+            board_space_y(1),
+            32,
+            32,
+            1.0f,
+            block_border_color,
+            b1_color
+            );
+    float *b1c = make_quad_with_border(
+            triangle_vertices+vert_draw_length,
+            board_space_x(0),
+            board_space_y(2),
+            32,
+            32,
+            1.0f,
+            block_border_color,
+            b1_color
+            );
+    float *b1d = make_quad_with_border(
+            triangle_vertices+vert_draw_length,
+            board_space_x(1),
+            board_space_y(2),
+            32,
+            32,
+            1.0f,
+            block_border_color,
             b1_color
             );
 
@@ -382,7 +445,7 @@ int main(void)
 
         pglBindVertexArray(triangle_vao);
 
-        pglDrawArrays(GL_TRIANGLES, 0, vert_draw_length);
+        pglDrawArrays(GL_TRIANGLES, 0, vert_draw_length / 6);
 
         glXSwapBuffers(display, window);
     }
